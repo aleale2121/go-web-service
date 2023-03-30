@@ -1,0 +1,5 @@
+go-web-service.code-workspace
+.trunk
+Makefile
+vendor
+zarf
