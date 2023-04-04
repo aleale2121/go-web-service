@@ -1,7 +1,7 @@
 SHELL := /bin/bash
 
 run:
-	go run main.go
+	go run app/services/sales-api/main.go | go run app/tooling/logfmt/main.go
 # ==============================================================================
 # Building containers
 
@@ -18,6 +18,14 @@ sales-api:
 		--build-arg BUILD_REF=$(VERSION) \
 		--build-arg BUILD_DATE=`date -u +"%Y-%m-%dT%H:%M:%SZ"` \
 		.
+# ==============================================================================
+# Metrics and Tracing
+
+metrics-view-local-sc:
+	expvarmon -ports="localhost:4000" -vars="build,requests,goroutines,errors,panics,mem:memstats.Alloc"
+
+metrics-view-sc:
+	expvarmon -ports="sales-service.sales-system.svc.cluster.local:4000" -vars="build,requests,goroutines,errors,panics,mem:memstats.Alloc"
 
 # ==============================================================================
 # Running from within k8s/kind
@@ -49,7 +57,7 @@ kind-down:
 	kind delete cluster --name $(KIND_CLUSTER)
 
 kind-logs:
-	kubectl logs -l app=sales --all-containers=true -f --tail=100
+	kubectl logs -l app=sales --all-containers=true -f --tail=100 | go run app/tooling/logfmt/main.go
 
 kind-restart:
 	kubectl rollout restart deployment sales-pod
