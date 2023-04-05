@@ -1,13 +1,17 @@
-// Package handlers manages the different versions of the API.
+// Package handlers contains the full set of handler functions and routes
+// supported by the web api.
 package handlers
 
 import (
 	"expvar"
 	"net/http"
 	"net/http/pprof"
+	"os"
 
-	"github.com/aleale2121/go-web-service/business/web/v1/debug/checkgrp"
-	// "github.com/jmoiron/sqlx"
+	"github.com/aleale2121/go-web-service/app/services/sales-api/handlers/debug/checkgrp"
+	"github.com/aleale2121/go-web-service/app/services/sales-api/handlers/v1/testgrp"
+	"github.com/aleale2121/go-web-service/business/web/mid"
+	"github.com/aleale2121/go-web-service/foundation/web"
 	"go.uber.org/zap"
 )
 
@@ -18,6 +22,7 @@ import (
 func DebugStandardLibraryMux() *http.ServeMux {
 	mux := http.NewServeMux()
 
+	// Register all the standard library debug endpoints.
 	mux.HandleFunc("/debug/pprof/", pprof.Index)
 	mux.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
 	mux.HandleFunc("/debug/pprof/profile", pprof.Profile)
@@ -28,13 +33,14 @@ func DebugStandardLibraryMux() *http.ServeMux {
 	return mux
 }
 
-// Mux registers all the debug standard library routes and then custom
+// DebugMux registers all the debug standard library routes and then custom
 // debug application routes for the service. This bypassing the use of the
 // DefaultServerMux. Using the DefaultServerMux would be a security risk since
 // a dependency could inject a handler into our service without us knowing it.
-func Mux(build string, log *zap.SugaredLogger) http.Handler {
+func DebugMux(build string, log *zap.SugaredLogger) http.Handler {
 	mux := DebugStandardLibraryMux()
 
+	// Register debug check endpoints.
 	cgh := checkgrp.Handlers{
 		Build: build,
 		Log:   log,
@@ -43,4 +49,38 @@ func Mux(build string, log *zap.SugaredLogger) http.Handler {
 	mux.HandleFunc("/debug/liveness", cgh.Liveness)
 
 	return mux
+}
+
+// APIMuxConfig contains all the mandatory systems required by handlers.
+type APIMuxConfig struct {
+	Shutdown chan os.Signal
+	Log      *zap.SugaredLogger
+}
+
+// APIMux constructs an http.Handler with all application routes defined.
+func APIMux(cfg APIMuxConfig) *web.App {
+
+	// Construct the web.App which holds all routes.
+	app := web.NewApp(
+		cfg.Shutdown,
+		mid.Logger(cfg.Log),
+		mid.Errors(cfg.Log),
+		mid.Metrics(),
+		mid.Panics(),
+	)
+
+	// Load the routes for the different versions of the API.
+	v1(app, cfg)
+
+	return app
+}
+
+// v1 binds all the version 1 routes.
+func v1(app *web.App, cfg APIMuxConfig) {
+	const version = "v1"
+
+	tgh := testgrp.Handlers{
+		Log: cfg.Log,
+	}
+	app.Handle(http.MethodGet, version, "/test", tgh.Test)
 }
