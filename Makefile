@@ -10,6 +10,10 @@ SHELL := /bin/bash
 # openssl genpkey -algorithm RSA -out private.pem -pkeyopt rsa_keygen_bits:2048
 # openssl rsa -pubout -in private.pem -out public.pem
 
+# Testing Auth
+# curl -il http://localhost:3000/v1/testauth
+# curl -il -H "Authorization: Bearer ${TOKEN}" http://localhost:3000/v1/testauth
+
 # ==============================================================================
 
 run:
@@ -28,7 +32,7 @@ all: sales-api
 sales-api:
 	docker build \
 		-f zarf/docker/dockerfile.sales-api \
-		-t sales-api-amd64:$(VERSION) \
+		-t sales-api:$(VERSION) \
 		--build-arg BUILD_REF=$(VERSION) \
 		--build-arg BUILD_DATE=`date -u +"%Y-%m-%dT%H:%M:%SZ"` \
 		.
@@ -36,7 +40,7 @@ sales-api:
 # ==============================================================================
 # Running from within k8s/kind
 
-KIND_CLUSTER := ardan-starter-cluster
+KIND_CLUSTER := api-starter-cluster
 
 kind-up:
 	kind create cluster \
@@ -49,8 +53,8 @@ kind-down:
 	kind delete cluster --name $(KIND_CLUSTER)
 
 kind-load:
-	cd zarf/k8s/kind/sales-pod; kustomize edit set image sales-api-image=sales-api-amd64:$(VERSION)
-	kind load docker-image sales-api-amd64:$(VERSION) --name $(KIND_CLUSTER)
+	cd zarf/k8s/kind/sales-pod; kustomize edit set image sales-api-image=sales-api:$(VERSION)
+	kind load docker-image sales-api:$(VERSION) --name $(KIND_CLUSTER)
 
 kind-apply:
 	kustomize build zarf/k8s/kind/sales-pod | kubectl apply -f -
