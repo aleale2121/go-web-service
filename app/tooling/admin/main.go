@@ -1,8 +1,8 @@
 package main
 
 import (
-	"crypto/rand"
-	"crypto/rsa"
+	// "crypto/rand"
+	// "crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
 	"errors"
@@ -58,14 +58,14 @@ func genToken() error {
 	// iat (issued at time): Time at which the JWT was issued; can be used to determine age of the JWT
 	// jti (JWT ID): Unique identifier; can be used to prevent the JWT from being replayed (allows a token to be used only once)
 	claims := struct {
-		jwt.StandardClaims
+		jwt.RegisteredClaims
 		Roles []string
 	}{
-		StandardClaims: jwt.StandardClaims{
+		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    "service project",
 			Subject:   "123456789",
-			ExpiresAt: time.Now().Add(8760 * time.Hour).Unix(),
-			IssuedAt:  time.Now().UTC().Unix(),
+			ExpiresAt: &jwt.NumericDate{Time: time.Now().Add(8760 * time.Hour)},
+			IssuedAt:  &jwt.NumericDate{Time: time.Now().UTC()},
 		},
 		Roles: []string{"ADMIN"},
 	}
@@ -145,7 +145,7 @@ func genToken() error {
 
 	return nil
 }
-
+/*
 // genKey creates an x509 private/public key for auth tokens.
 func genKey() error {
 
@@ -202,3 +202,4 @@ func genKey() error {
 	fmt.Println("private and public key files generated")
 	return nil
 }
+*/
