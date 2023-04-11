@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/aleale2121/go-web-service/business/data/schema"
+	"github.com/aleale2121/go-web-service/business/data/store/user"
 	"github.com/aleale2121/go-web-service/business/sys/auth"
 	"github.com/aleale2121/go-web-service/business/sys/database"
 	"github.com/aleale2121/go-web-service/foundation/docker"
@@ -134,6 +135,24 @@ func NewIntegration(t *testing.T, dbc DBContainer) *Test {
 	}
 
 	return &test
+}
+
+// Token generates an authenticated token for a user.
+func (test *Test) Token(email, pass string) string {
+	test.t.Log("Generating token for test ...")
+
+	store := user.NewStore(test.Log, test.DB)
+	claims, err := store.Authenticate(context.Background(), time.Now(), email, pass)
+	if err != nil {
+		test.t.Fatal(err)
+	}
+
+	token, err := test.Auth.GenerateToken(claims)
+	if err != nil {
+		test.t.Fatal(err)
+	}
+
+	return token
 }
 
 // StringPointer is a helper to get a *string from a string. It is in the tests
